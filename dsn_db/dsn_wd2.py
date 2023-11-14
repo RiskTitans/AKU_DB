@@ -2,14 +2,14 @@ import pandas as pd
 import os
 import time
 from sqlalchemy import create_engine
-from cleaner import clean_excel
+
 
 # Connect to the PostgreSQL database
 db_url = 'postgresql://postgres:postgres@localhost:5432/DSN_DB'
 engine_dsn = create_engine(db_url)
 
 
-folder_path = r'C:\Users\yuriy\Desktop\db_tables\13_work_documentation\upload_files'
+folder_path = r'C:\Users\yuriy\Desktop\db_tables\DSNDB\13_work_documentation\upload_files'
 dd_list_cols = {
     'id_obj': 'id_obj',
     'Текущая ревизия': 'current_rev',
@@ -42,13 +42,13 @@ wd_cols = {
     'Пакет РД': 'wd_batch',
     'Код KKS документа': 'wd_kks',
     'designer_code': 'designer_code',
-    'Объект': 'object',
-    'object_name': 'object_name',
-    'Группа': 'unit',
-    'WBS': 'wbs',
-    'wbs_name': 'wbs_name',
-    'Код работы СМР': 'smr_code',
-    'Вид работ': 'dd_type',
+    # 'Объект': 'object',
+    # 'object_name': 'object_name',
+    # 'Группа': 'unit',
+    # 'WBS': 'wbs',
+    # 'wbs_name': 'wbs_name',
+    # 'Код работы СМР': 'smr_code',
+    # 'Вид работ': 'dd_type',
 }
 smr_cols = {
     'id_obj': 'id_obj',
@@ -91,10 +91,11 @@ def compare_dfs(df, db_df, table_name, pk):
     df = df.where(pd.notna(df), None)
     start = time.time()
     aligned_df = db_df[[col for col in df.columns]]
+
     df['source'] = 'new'
     aligned_df['source'] = 'old'
-    # source 'new' and 'old' need for getting rows only from excel file
-    # (some excel files have missing rows compared to database
+    # source 'new' and 'old' need for getting rows only from Excel file
+    # (some Excel files have missing rows compared to database
     concatenated_df = pd.concat([df, aligned_df], ignore_index=True)
 
     if table_name == 'designers':
@@ -118,7 +119,9 @@ def compare_dfs(df, db_df, table_name, pk):
 
 def excel_dfs(file_path):
 
-    df_excel = clean_excel(file_path, all_cols)
+    #df_excel = clean_excel(file_path, all_cols)
+    df_excel = pd.read_excel(file_path, sheet_name='Итого')
+
     # split df into df for each table from db
     start = time.time()
     df_dd_list = df_excel[[col for col in dd_list_cols.values() if col in df_excel.columns]]
@@ -164,18 +167,19 @@ def sql_dfs():
                      .reset_index()
                      )
     df_wd_db = pd.read_sql_query(sql_wd, engine_dsn)
-    df_smr_db = pd.read_sql_query(sql_smr, engine_dsn)
-    df_designers_db = pd.read_sql_query(sql_designers, engine_dsn)
-    df_smeta_base_db = pd.read_sql_query(sql_base_smeta, engine_dsn)
-    df_smeta_resource_db = pd.read_sql_query(sql_resource_smeta, engine_dsn)
+    # df_smr_db = pd.read_sql_query(sql_smr, engine_dsn)
+    # df_designers_db = pd.read_sql_query(sql_designers, engine_dsn)
+    # df_smeta_base_db = pd.read_sql_query(sql_base_smeta, engine_dsn)
+    # df_smeta_resource_db = pd.read_sql_query(sql_resource_smeta, engine_dsn)
 
+    #TODO 1: Complete design of database!
     df_sql_list = {
-        'dd_list': df_dd_list_db,
+        # 'dd_list': df_dd_list_db,
         'wd': df_wd_db,
-        'smr': df_smr_db,
-        'designers': df_designers_db,
-        'smeta_base': df_smeta_base_db,
-        'smeta_resource': df_smeta_resource_db
+        #'smr': df_smr_db,
+        #'designers': df_designers_db,
+        #'smeta_base': df_smeta_base_db,
+        #'smeta_resource': df_smeta_resource_db
     }
     end = time.time()
     print('sql dataframes init time:', end - start)
