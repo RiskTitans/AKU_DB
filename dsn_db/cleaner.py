@@ -78,7 +78,7 @@ all_cols = {**dd_list_cols,
 
 
 def clean_excel(file_path, all_cols):
-    save_path = r'C:\Users\yuriy\Desktop\db_tables\DSNDB\13_work_documentation\upload_files'
+    save_path = r'C:\Users\yuriy\Desktop\db_tables\13_work_documentation\upload_files'
     filename = os.path.basename(file_path)
     save_file_path = os.path.join(save_path, filename)
 
@@ -141,8 +141,6 @@ def clean_excel(file_path, all_cols):
             print("\n".join(only_file) + '\n')
             print('=' * 30 + '\n')
             return None
-        else:
-            print('all columns are same')
 
         # rename columns, align columns and drop unused and duplicated columns
         df = (df.rename(columns=all_cols))
@@ -177,7 +175,7 @@ def clean_excel(file_path, all_cols):
             pd.to_datetime(df['expected_developer_date'],
                            errors='coerce').isna())
         df['expected_developer_date'] = pd.to_datetime(df['expected_developer_date'],
-                                                       format='%Y-%m-%d %H:%M:%S.%f', errors='coerce')
+                                                       errors='coerce')
 
         df['expected_toproduction_status'] = df['expected_toproduction_date'].where(
             pd.to_datetime(df['expected_toproduction_date'],
@@ -187,20 +185,14 @@ def clean_excel(file_path, all_cols):
 
         #organize code
         df['designer_code'] = df['wd_kks'].str.extract(r'AKU\.(\d{4})')
-        # TODO 1: solve for multiple hyphens texts
-        # df[['object', 'object_name']] = df['object'].str.split(' - ', 1, expand=True)
-        #df[['wbs', 'wbs_name']] = df['wbs'].str.split(' - ', 1, expand=True)
-        df['object_name'] = ''
-        df['wbs_name'] = ''
+        df[['object', 'object_name']] = df['object'].str.split(' - ', 1, expand=True)
+        df[['wbs', 'wbs_name']] = df['wbs'].str.split(' - ', 1, expand=True)
 
         end = time.time()
         print('Total time: ', end-start)
 
-        df_cols = list(all_cols.values())
-        df = df[df_cols]
-
         df.to_excel(save_file_path, sheet_name='Итого', columns=all_cols.values(), index=False)
-
+        return df
     except Exception as e:
         print(f"Error processing {filename}: {str(e)}")
         return None
@@ -212,18 +204,3 @@ def clean_excel(file_path, all_cols):
 #     file_name = 'Отчет 20.1 по статусам РД (бл.1-4) на 2023.09.11.xlsx'
 #     file_path = os.path.join(folder_path, file_name)
 #     clean_excel(file_path, all_cols)
-# Load the uploaded file, if it exists
-if os.path.exists('uploaded_files.txt'):
-    with open('uploaded_files.txt', 'r', encoding="utf-8") as file:
-        uploaded_files = file.read().splitlines()
-else:
-    uploaded_files = []
-
-
-folder_path = r'C:\Users\yuriy\Desktop\db_tables\DSNDB\13_work_documentation\upload_files'
-
-for filename in os.listdir(folder_path):
-    file_path = os.path.join(folder_path, filename)
-    if os.path.isfile(file_path) and filename not in uploaded_files:
-        clean_excel(file_path, all_cols)
-        print(f'{filename} is cleaned and saved')
