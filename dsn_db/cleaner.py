@@ -1,7 +1,7 @@
 import os
 import pandas as pd
 import time
-# folder_path = r'C:\Users\yuriy\Desktop\db_tables\13_work_documentation\test'
+folder_path = r'C:\Users\yuriy\Desktop\db_tables\13_work_documentation\xlsx_files'
 dd_list_cols = {
     'id_obj': 'id_obj',
     'Текущая ревизия': 'current_rev',
@@ -35,10 +35,10 @@ wd_cols = {
     'Код KKS документа': 'wd_kks',
     'designer_code': 'designer_code',
     'Объект': 'object',
-    'object_name': 'object_name',
+    # 'object_name': 'object_name',
     'Группа': 'unit',
     'WBS': 'wbs',
-    'wbs_name': 'wbs_name',
+    # 'wbs_name': 'wbs_name',
     'Код работы СМР': 'smr_code',
     'Вид работ': 'dd_type',
 }
@@ -78,7 +78,7 @@ all_cols = {**dd_list_cols,
 
 
 def clean_excel(file_path, all_cols):
-    save_path = r'C:\Users\yuriy\Desktop\db_tables\13_work_documentation\upload_files'
+    save_path = r'C:\Users\yuriy\Desktop\db_tables\DSNDB\13_work_documentation\upload_files'
     filename = os.path.basename(file_path)
     save_file_path = os.path.join(save_path, filename)
 
@@ -173,20 +173,21 @@ def clean_excel(file_path, all_cols):
         #seperate mixed data datetime and str
         df['expected_developer_status'] = df['expected_developer_date'].where(
             pd.to_datetime(df['expected_developer_date'],
-                           errors='coerce').isna())
+                           errors='coerce',  format='%Y-%m-%d').isna())
         df['expected_developer_date'] = pd.to_datetime(df['expected_developer_date'],
-                                                       errors='coerce')
+                                                       errors='coerce',  format='%Y-%m-%d')
 
         df['expected_toproduction_status'] = df['expected_toproduction_date'].where(
             pd.to_datetime(df['expected_toproduction_date'],
-                           errors='coerce').isna())
+                           errors='coerce',  format='%Y-%m-%d').isna())
         df['expected_toproduction_date'] = pd.to_datetime(df['expected_toproduction_date'],
-                                                          errors='coerce')
+                                                          errors='coerce',  format='%Y-%m-%d')
 
         #organize code
         df['designer_code'] = df['wd_kks'].str.extract(r'AKU\.(\d{4})')
-        df[['object', 'object_name']] = df['object'].str.split(' - ', 1, expand=True)
-        df[['wbs', 'wbs_name']] = df['wbs'].str.split(' - ', 1, expand=True)
+
+        # df[['object', 'object_name']] = df['object'].str.split(' - ', 1, expand=True)
+        # df[['wbs', 'wbs_name']] = df['wbs'].str.split(' - ', 1, expand=True)
 
         end = time.time()
         print('Total time: ', end-start)
@@ -200,7 +201,8 @@ def clean_excel(file_path, all_cols):
 
 #debug
 # if __name__ == "__main__":
-#     folder_path = r'C:\Users\yuriy\Desktop\db_tables\13_work_documentation\xlsx_files'
-#     file_name = 'Отчет 20.1 по статусам РД (бл.1-4) на 2023.09.11.xlsx'
+#     folder_path = r'C:\Users\yuriy\Desktop\db_tables\DSNDB\13_work_documentation\xlsx_files'
+#     file_name = 'Отчет 20.1 по статусам РД (бл.1-4) на 2023.11.13.xlsx'
 #     file_path = os.path.join(folder_path, file_name)
-#     clean_excel(file_path, all_cols)
+#     df = clean_excel(file_path, all_cols)
+#     print(df)

@@ -2,14 +2,14 @@ import pandas as pd
 import os
 import time
 from sqlalchemy import create_engine
-
+from dsn_db.cleaner import clean_excel
 
 # Connect to the PostgreSQL database
 db_url = 'postgresql://postgres:postgres@localhost:5432/DSN_DB'
 engine_dsn = create_engine(db_url)
 
 
-folder_path = r'C:\Users\yuriy\Desktop\db_tables\DSNDB\13_work_documentation\upload_files'
+folder_path = r'C:\Users\yuriy\Desktop\db_tables\DSNDB\13_work_documentation\xlsx_files'
 dd_list_cols = {
     'id_obj': 'id_obj',
     'Текущая ревизия': 'current_rev',
@@ -85,6 +85,8 @@ all_cols = {**dd_list_cols,
             **resource_smeta_cols}
 
 
+
+
 def compare_dfs(df, db_df, table_name, pk):
     # df is excel data, db_df is database data
     # find new rows and changed rows in df_dd_list
@@ -119,8 +121,8 @@ def compare_dfs(df, db_df, table_name, pk):
 
 def excel_dfs(file_path):
 
-    #df_excel = clean_excel(file_path, all_cols)
-    df_excel = pd.read_excel(file_path, sheet_name='Итого')
+    df_excel = clean_excel(file_path, all_cols)
+    #df_excel = pd.read_excel(file_path, sheet_name='Итого')
 
     # split df into df for each table from db
     start = time.time()
@@ -134,15 +136,15 @@ def excel_dfs(file_path):
 
     df_wd = df_excel[[col for col in wd_cols.values() if col in df_excel.columns]]
     df_smr = df_excel[[col for col in smr_cols.values() if col in df_excel.columns]]
-    df_base_smeta = df_excel[[col for col in base_smeta_cols.values() if col in df_excel.columns]]
-    df_resource_smeta = df_excel[[col for col in resource_smeta_cols.values() if col in df_excel.columns]]
+    # df_base_smeta = df_excel[[col for col in base_smeta_cols.values() if col in df_excel.columns]]
+    # df_resource_smeta = df_excel[[col for col in resource_smeta_cols.values() if col in df_excel.columns]]
     df_excel_list = {
         'dd_list': df_dd_list,
         'wd': df_wd,
         'smr': df_smr,
         'designers': df_designers,
-        'smeta_base': df_base_smeta,
-        'smeta_resource': df_resource_smeta
+        # 'smeta_base': df_base_smeta,
+        # 'smeta_resource': df_resource_smeta
     }
     end = time.time()
     print('Excel dataframes init time:', end - start)
@@ -156,8 +158,8 @@ def sql_dfs():
     sql_wd = 'SELECT * FROM wd'
     sql_smr = 'SELECT * FROM smr'
     sql_designers = 'SELECT * FROM designers'
-    sql_base_smeta = 'SELECT * FROM smeta_base'
-    sql_resource_smeta = 'SELECT * FROM smeta_resource'
+    # sql_base_smeta = 'SELECT * FROM smeta_base'
+    # sql_resource_smeta = 'SELECT * FROM smeta_resource'
 
     df_dd_list_db = (pd.read_sql_query(sql_dd_list, engine_dsn)
                      .drop(columns='source_file')
@@ -167,19 +169,19 @@ def sql_dfs():
                      .reset_index()
                      )
     df_wd_db = pd.read_sql_query(sql_wd, engine_dsn)
-    # df_smr_db = pd.read_sql_query(sql_smr, engine_dsn)
-    # df_designers_db = pd.read_sql_query(sql_designers, engine_dsn)
+    df_smr_db = pd.read_sql_query(sql_smr, engine_dsn)
+    df_designers_db = pd.read_sql_query(sql_designers, engine_dsn)
     # df_smeta_base_db = pd.read_sql_query(sql_base_smeta, engine_dsn)
     # df_smeta_resource_db = pd.read_sql_query(sql_resource_smeta, engine_dsn)
 
     #TODO 1: Complete design of database!
     df_sql_list = {
-        # 'dd_list': df_dd_list_db,
+        'dd_list': df_dd_list_db,
         'wd': df_wd_db,
-        #'smr': df_smr_db,
-        #'designers': df_designers_db,
-        #'smeta_base': df_smeta_base_db,
-        #'smeta_resource': df_smeta_resource_db
+        'smr': df_smr_db,
+        'designers': df_designers_db,
+        # 'smeta_base': df_smeta_base_db,
+        # 'smeta_resource': df_smeta_resource_db
     }
     end = time.time()
     print('sql dataframes init time:', end - start)
@@ -205,13 +207,18 @@ def upload_to_sql(file_name, file_path):
             if table_name == 'dd_list':
                 new_data['source_file'] = file_name
                 changed_data['source_file'] = file_name
+
                 new_data.to_sql(table_name, engine_dsn, if_exists='append', index=False)
                 changed_data.to_sql(table_name, engine_dsn, if_exists='append', index=False)
+                print(f'{table_name} is uploaded to db!')
             else:
                 all_data = pd.concat([db_df, changed_data, new_data], ignore_index=True)
-                # all_data = all_data.drop(columns='source')
                 all_data = all_data.drop_duplicates(subset=pk_column, keep='last', ignore_index=True)
+
                 all_data.to_sql(table_name, engine_dsn, if_exists='replace', index=False)
+                print(f'{table_name} is uploaded to db!')
+        else:
+            print(f'{table_name} does not have any changes or new rows')
 
     end5 = time.time()
     print('upload to SQL time:', end5 - start5)
