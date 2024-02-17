@@ -1,8 +1,10 @@
 import os
 import pandas as pd
 import time
+
 folder_path = r'C:\Users\yuriy\Desktop\db_tables\13_work_documentation\xlsx_files'
-dd_list_cols = {
+
+dd_log_cols = {
     'id_obj': 'id_obj',
     'Текущая ревизия': 'current_rev',
     'Статус текущей ревизии': 'status_current_rev',
@@ -10,8 +12,8 @@ dd_list_cols = {
     'Письма': 'letter',
     'Статус Заказчика': 'status_company',
     'Дата статуса Заказчика': 'status_date_company',
-    'Первый статус по выпуску РД': 'first_status_wd',
-    'Дата выпуска РД': 'release_date_wd',
+    'Первый статус по выпуску РД': 'first_status_dd',
+    'Дата выпуска РД': 'release_date_dd',
     'Ревизия, выданная в производство': 'rev_onproduction',
     'Дата выдачи в производство': 'date_toproduction',
     'Письмо о выдаче в производство': 'letter_toproduction',
@@ -27,12 +29,12 @@ dd_list_cols = {
     'expected_toproduction_status': 'expected_toproduction_status',
     # 'source_file': 'source_file'
 }
-wd_cols = {
+dd_cols = {
     'id_obj': 'id_obj',
-    'Наименование объекта/комплекта РД': 'wd_name',
-    'Коды работ по выпуску РД': 'wd_code',
-    'Пакет РД': 'wd_batch',
-    'Код KKS документа': 'wd_kks',
+    'Наименование объекта/комплекта РД': 'dd_name',
+    'Коды работ по выпуску РД': 'dd_code',
+    'Пакет РД': 'dd_batch',
+    'Код KKS документа': 'dd_kks',
     'designer_code': 'designer_code',
     'Объект': 'object',
     # 'object_name': 'object_name',
@@ -54,7 +56,6 @@ designers_cols = {
     'Разработчики РД (актуальные)': 'developer_actual',
 }
 base_smeta_cols = {
-    'id_obj': 'id_obj',
     'Код KKS базисной сметы': 'basesmeta_kks',
     'Номер базисной сметы': 'basesmeta_no',
     'Ревизия базисной сметы': 'basesmeta_rev',
@@ -62,15 +63,14 @@ base_smeta_cols = {
     'Дата статуса базисной сметы': 'basesmeta_date',
 }
 resource_smeta_cols = {
-    'id_obj': 'id_obj',
     'Код KKS ресурсной сметы': 'resourcesmeta_kks',
     'Номер ресурсной сметы': 'resourcesmeta_no',
     'Ревизия ресурсной сметы': 'resourcesmeta_rev',
     'Статус ресурсной сметы': 'resourcesmeta_status',
     'Дата статуса ресурсной сметы': 'resourcesmeta_date',
 }
-all_cols = {**dd_list_cols,
-            **wd_cols,
+all_cols = {**dd_log_cols,
+            **dd_cols,
             **smr_cols,
             **designers_cols,
             **base_smeta_cols,
@@ -145,20 +145,19 @@ def clean_excel(file_path, all_cols):
         # rename columns, align columns and drop unused and duplicated columns
         df = (df.rename(columns=all_cols))
 
-        # Drop empty cells in 'wd_code' and align column types according to database
+        # Drop empty cells in 'dd_code' and align column types according to database
         df['id_obj'] = pd.to_numeric(df['id_obj'], errors='coerce')
-        df.dropna(subset=['wd_code', 'id_obj'], inplace=True)
+        df.dropna(subset=['dd_code', 'id_obj'], inplace=True)
         df['id_obj'] = df['id_obj'].astype('int64')
         df = (df.drop_duplicates(subset="id_obj", keep='last', ignore_index=True)
               .set_index(["id_obj"])
               .sort_index()
               .reset_index())
-
-        # df = df.drop_duplicates(subset='id_obj',  keep='last', ignore_index=True).reset_index(drop=True)
-
+        #TODO 2: split rows where 2 kks and rev in one row!
+        df = df.dropna(subset=['basesmeta_kks', 'resourcesmeta_kks', 'basesmeta_rev', 'resourcesmeta_rev'])
         date_cols = ['status_date',
                      'status_date_company',
-                     'release_date_wd',
+                     'release_date_dd',
                      'date_toproduction',
                      'contract_toproduction_date',
                      'company_toproduction_date',
@@ -184,15 +183,18 @@ def clean_excel(file_path, all_cols):
                                                           errors='coerce',  format='%Y-%m-%d')
 
         #organize code
-        df['designer_code'] = df['wd_kks'].str.extract(r'AKU\.(\d{4})')
-
+        df['designer_code'] = df['dd_kks'].str.extract(r'AKU\.(\d{4})')
         # df[['object', 'object_name']] = df['object'].str.split(' - ', 1, expand=True)
         # df[['wbs', 'wbs_name']] = df['wbs'].str.split(' - ', 1, expand=True)
 
         end = time.time()
         print('Total time: ', end-start)
 
-        df.to_excel(save_file_path, sheet_name='Итого', columns=all_cols.values(), index=False)
+        files_save_path = os.listdir(save_path)
+        if filename not in files_save_path:
+            df.to_excel(save_file_path, sheet_name='Итого', columns=all_cols.values(), index=False)
+        else:
+            print(f'{filename} already in save path!')
         return df
     except Exception as e:
         print(f"Error processing {filename}: {str(e)}")
